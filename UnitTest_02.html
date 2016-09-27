@@ -1,0 +1,19 @@
+﻿<!-- This unit test picks up a few more valid HTML5 issues that couldn't be combined with UnitTest_01. -->
+<head>
+  <meta name="comment" content="Meta is a void element. Doesn't require termination.">
+</head>
+<p>Here's a paragraph.<br> Belongs in the body.
+<div>This div will auto-terminate the paragraph above.</div>
+<!-- Auto-termination of options. -->
+<select>
+  <optgroup label="Fruit">
+    <option value="Apple">Apple
+    <option value="Pear">Pear
+    <option value="Orange">Orange
+  <optgroup label="Vegetable">
+    <option value="Broccoli">Broccoli
+    <option value="Sugar">Sugar
+</select>
+<p>ABC and 123
+<p>Why does only one of the "three r's" begin with the letter "r"?
+<p>Null

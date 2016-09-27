@@ -1,0 +1,27 @@
+﻿<!-- This unit test exercies valid HTML5 features that don't comply with XML such as omitted tags (<html>, <body>),
+omitted end tags (</p>) and more. -->
+<html>
+  <body>
+    <h1>I Like Flowers</h1>
+    <p align="center">Attribute values don't require quotes.</p>
+    <hr />
+    <div>Capitalization on tags doesn't have to match.</div>
+    <table>
+      <tbody>
+        <tr>
+          <th>Head1</th>
+          <th>Head2</th>
+        </tr>
+        <tr>
+          <td>&lt;tbody&amp;gt is<br />added automatically.</td>
+          <td>And &lt;/td&gt;can be left out.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Paragraphs are auto-terminated by other paragraphs.</p>
+    <p>And paragraphs can be auto-terminated by headings.</p>
+    <h1>Here's a heading.</h1>
+    <p>Some text<font color="red" face="verdana" size="15px">with<br />font</font>stuff (HTML5 would use css).</p>
+    <p>Line<br />breaks<br />are<br />void<br />tags<br />but don't require that marking.</p>
+  </body>
+</html>

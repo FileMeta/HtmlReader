@@ -1,0 +1,15 @@
+﻿<!-- This unit test covers things the reader tolerates but are invalid XML and HTML5. -->
+<div>
+  <span>We open a span but don't close it.
+  <span>In fact, we open a span within a span.
+  <br>But it's the surrounding div that closes it all.
+  <br>That's bad HTML. Spans can be nested but should have end-tags.
+</div>
+<zz:top>
+  A namespace will be created for an <zz:Hello yyz:rush="music">arbitrary</zz:Hello> prefix. This is extra tolerance beyond XML or HTML requirements.
+</zz:top>
+<p>
+  This paragraph has a <br>break with an</br>end-tag but break is a void element.
+  It also includes an </hr> end hr tag and an </span> end span tag without matching begin tags.
+</p>
+<xy:morestuff>This is bad syntax in HTML or XML but this is a tolerant reader.
