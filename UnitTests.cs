@@ -2,6 +2,7 @@
 using System.Text;
 using Html;
 using System.Xml;
+using System.Xml.XPath;
 using System.IO;
 using System.Diagnostics;
 
@@ -45,6 +46,38 @@ namespace HtmlReaderTest
 
             Debug.Assert(succeeded);
             return succeeded;
+        }
+
+        public static void UnexpectedEof(int testIndex)
+        {
+            string htmlFilename;
+            string xmlFilename;
+            GenerateFilenames(testIndex, out htmlFilename, out xmlFilename);
+
+            // Load the HTML into a string
+            string html;
+            using (StreamReader reader = new StreamReader(htmlFilename, Encoding.UTF8, true))
+            {
+                html = reader.ReadToEnd();
+            }
+
+            HtmlReaderSettings settings = new HtmlReaderSettings();
+            settings.CloseInput = true;
+
+            // Repeatedly parse the HTML, each time taking off one character and ensure that the reader deals
+            // with this gracefully, without going into an infinite loop.
+            while (html.Length > 0)
+            {
+                using (HtmlReader reader = new HtmlReader(new StringReader(html), settings))
+                {
+                    XPathDocument doc = new XPathDocument(reader);
+                }
+
+                html = html.Substring(0, html.Length - 1);
+            }
+
+            // Failure will throw an exception (which we don't catch)
+            Console.WriteLine("UnexpectedEof({0}) succeeded.", testIndex);
         }
 
         public static void HtmlToXml(TextReader htmlIn, TextWriter xmlOut)
