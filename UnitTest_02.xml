@@ -4,22 +4,31 @@
     <meta name="comment" content="Meta is a void element. Doesn't require termination." />
   </head>
   <body>
-    <p>Here's a paragraph.<br />Belongs in the body.</p>
+    <p>Here's a paragraph.<br /> Belongs in the body.
+</p>
     <div>This div will auto-terminate the paragraph above.</div>
     <!-- Auto-termination of options. -->
     <select>
       <optgroup label="Fruit">
-        <option value="Apple">Apple</option>
-        <option value="Pear">Pear</option>
-        <option value="Orange">Orange</option>
+        <option value="Apple">Apple
+    </option>
+        <option value="Pear">Pear
+    </option>
+        <option value="Orange">Orange
+  </option>
       </optgroup>
       <optgroup label="Vegetable">
-        <option value="Broccoli">Broccoli</option>
-        <option value="Sugar">Sugar</option>
+        <option value="Broccoli">Broccoli
+    </option>
+        <option value="Sugar">Sugar
+</option>
       </optgroup>
     </select>
-    <p>ABC and 123</p>
-    <p>Why does only one of the "three r's" begin with the letter "r"?</p>
-    <p>Null</p>
+    <p>ABC and 123
+</p>
+    <p>Why does only one of the "three r's" begin with the letter "r"?
+</p>
+    <p>Null
+</p>
   </body>
 </html>

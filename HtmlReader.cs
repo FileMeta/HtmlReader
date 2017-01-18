@@ -56,7 +56,7 @@ namespace Html
         public bool EmitHtmlNamespace { get; set; }
         public bool IgnoreComments { get; set; }
         public bool IgnoreProcessingInstructions { get; set; }
-        public bool IgnoreWhitespace { get; set; }
+        public bool IgnoreInsignificantWhitespace { get; set; }
         public XmlNameTable NameTable { get; set; }
 
         public HtmlReaderSettings Clone()
@@ -129,7 +129,7 @@ namespace Html
         // XmlReader state (for inbound calls)
         XmlNameTable m_nameTable;
         ReadState m_readState;
-        Stack<Node> m_parents;
+        Node m_nodeStackTop;
         Node m_currentNode;
         List<Node> m_currentAttributes;
 
@@ -151,8 +151,8 @@ namespace Html
 
             m_nameTable = settings.NameTable ?? new NameTable();
             m_readState = ReadState.Initial;
-            m_parents = new Stack<Node>();
-            SetCurrentNode(new Node(0, XmlNodeType.None, string.Empty));
+            m_nodeStackTop = null;
+            SetCurrentNode(new Node(null, XmlNodeType.None, string.Empty));
             m_currentAttributes = new List<Node>();
 
             m_nextNodes = new Queue<Node>();
@@ -172,9 +172,9 @@ namespace Html
                 m_reader.Close();
             }
             m_reader = null;
-            m_parents.Clear();
+            m_nodeStackTop = null;
             m_currentAttributes.Clear();
-            SetCurrentNode(new Node(0, XmlNodeType.None, string.Empty));
+            SetCurrentNode(new Node(null, XmlNodeType.None, string.Empty));
             m_readState = ReadState.Closed;
         }
 
@@ -334,7 +334,7 @@ namespace Html
 
             if (m_currentNode.NodeType == XmlNodeType.Attribute)
             {
-                PopNodeStack();
+                SetCurrentNode(PopNodeStack());
                 return true;
             }
 
@@ -383,7 +383,7 @@ namespace Html
             ExitReadAttribute();
             if (m_currentNode.NodeType == XmlNodeType.Attribute)
             {
-                PopNodeStack();
+                SetCurrentNode(PopNodeStack());
             }
 
             // Read the next node
@@ -393,7 +393,7 @@ namespace Html
         public override bool ReadAttributeValue()
         {
             if (m_currentNode.NodeType != XmlNodeType.Attribute) return false;
-            Node textNode = new Node(m_currentNode.Depth + 1, XmlNodeType.Text, m_currentNode.Value);
+            Node textNode = new Node(m_currentNode, XmlNodeType.Text, m_currentNode.Value);
             PushNodeStack();
             SetCurrentNode(textNode);
             return true;
@@ -473,7 +473,7 @@ namespace Html
                     {
                         continue;
                     }
-                    if (m_currentNode.NodeType == XmlNodeType.Whitespace && m_settings.IgnoreWhitespace)
+                    if (m_currentNode.NodeType == XmlNodeType.Whitespace && m_settings.IgnoreInsignificantWhitespace)
                     {
                         continue;
                     }
@@ -488,12 +488,11 @@ namespace Html
             if (m_currentNode.NodeType == XmlNodeType.EndElement)
             {
 #if DEBUG
-                Node match = m_parents.Pop();
+                Node match = PeekNodeStack();
                 Debug.Assert(string.Equals(match.Prefix, m_currentNode.Prefix, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(match.LocalName, m_currentNode.LocalName, StringComparison.OrdinalIgnoreCase));
-#else
-                m_parents.Pop();
 #endif
+                PopNodeStack(); // Pop the node stack without setting the current element
             }
 
             return (m_readState < ReadState.EndOfFile);
@@ -502,9 +501,9 @@ namespace Html
         private bool ExitReadAttribute()
         {
             // If we're inside a ReadAttribute()
-            if (m_currentNode.NodeType == XmlNodeType.Text && CountNodeStack() > 0 && PeekNodeStack().NodeType == XmlNodeType.Attribute)
+            if (m_currentNode.NodeType == XmlNodeType.Text && m_nodeStackTop != null && m_nodeStackTop.NodeType == XmlNodeType.Attribute)
             {
-                PopNodeStack();
+                SetCurrentNode(PopNodeStack());
                 return true;
             }
             return false;
@@ -559,11 +558,11 @@ namespace Html
             {
                 if (ReadMatch("!--"))
                 {
-                    m_currentNode = new Node(ScanDepth, XmlNodeType.Comment, ScanUntil("-->"));
+                    m_currentNode = new Node(PeekNodeStack(), XmlNodeType.Comment, ScanUntil("-->"));
                 }
                 else if (ReadMatch("![CDATA["))
                 {
-                    m_currentNode = new Node(ScanDepth, XmlNodeType.CDATA, ScanUntil("]]>"));
+                    m_currentNode = new Node(PeekNodeStack(), XmlNodeType.CDATA, ScanUntil("]]>"));
                 }
                 else if (ReadMatch("!DOCTYPE"))
                 {
@@ -572,7 +571,7 @@ namespace Html
                     // TODO: Read the contents (using ScanUntil) and validate that it's an appropriate HTML doctype.
 
                     // Return a standard HTML5 DOCTYPE
-                    m_currentNode = new Node(0, XmlNodeType.DocumentType, string.Empty);
+                    m_currentNode = new Node(null, XmlNodeType.DocumentType, string.Empty);
                     m_currentNode.SetName(string.Empty, "html");
                 }
                 else
@@ -625,10 +624,15 @@ namespace Html
                 builder.Append(ch);
             }
 
-            // If there is whitespace and previous node was not text or EOF, return this
-            if ((m_prevNodeType != XmlNodeType.Text && builder.Length > 0) || CharEof)
+            // Based on the next character, indicate if whitespace is significant
+            if (CharPeek() != '<') WhitespaceIsSignificant = true;
+
+            // If there is whitespace and previous node was not text or this is EOF return this as a whitespace node.
+            if (builder.Length > 0 && (m_prevNodeType != XmlNodeType.Text || CharEof))
             {
-                SetCurrentNode(new Node(ScanDepth, XmlNodeType.Whitespace, builder.ToString()));
+                SetCurrentNode(new Node(PeekNodeStack(), 
+                    WhitespaceIsSignificant ? XmlNodeType.SignificantWhitespace : XmlNodeType.Whitespace,
+                    builder.ToString()));
                 return;
             }
             int nTrailingWhitespace = builder.Length;
@@ -662,7 +666,7 @@ namespace Html
                 }
             }
 
-            // Unread accumulated whitespace
+            // Save accumulated whitespace
             string trailingWhitespace = null;
             if (nTrailingWhitespace > 0)
             {
@@ -671,17 +675,21 @@ namespace Html
             }
 
             // Emit the text (with HtmlDecode)
-            SetCurrentNode(new Node(ScanDepth, XmlNodeType.Text, System.Net.WebUtility.HtmlDecode(builder.ToString())));
+            SetCurrentNode(new Node(PeekNodeStack(), XmlNodeType.Text, System.Net.WebUtility.HtmlDecode(builder.ToString())));
+
+            WhitespaceIsSignificant = true;
 
             // If there's trailing whitespace then queue it up.
             if (trailingWhitespace != null)
             {
-                m_nextNodes.Enqueue(new Node(ScanDepth, XmlNodeType.Whitespace, trailingWhitespace));
+                m_nextNodes.Enqueue(new Node(PeekNodeStack(), XmlNodeType.SignificantWhitespace, trailingWhitespace));
             }
         }
 
         void ScanElement()
         {
+            // === Scan the Element
+
             // Get the element name
             string prefix;
             string localName;
@@ -700,13 +708,13 @@ namespace Html
                 newDefaultNamespaceUri = c_SvgUri;
             }
 
-            // Create the element and set the name
-            Node elementNode = new Node(ScanDepth, XmlNodeType.Element, string.Empty);
+            // Create the element and set the name (Parent will be set later)
+            Node elementNode = new Node(null, XmlNodeType.Element, string.Empty);
             elementNode.SetName(prefix, localName);
             List<Node> attributes = new List<Node>();
             elementNode.Attributes = attributes;
 
-            // Handle all attributes
+            // Handle all attributes with special handling for namespacing
             for (;;)
             {
                 string attributePrefix;
@@ -740,7 +748,7 @@ namespace Html
                 }
 
                 // Add the attribute
-                Node attributeNode = new Node(elementNode.Depth + 1, XmlNodeType.Attribute, attributeValue);
+                Node attributeNode = new Node(elementNode, XmlNodeType.Attribute, attributeValue);
                 attributeNode.SetName(attributePrefix, attributeName);
                 attributeNode.AttributeIndex = attributes.Count;
                 attributes.Add(attributeNode);
@@ -756,7 +764,7 @@ namespace Html
             elementNode.NamespaceUri = GetNamespaceUriForPrefix(elementNode, elementNode.Prefix);
 
             // Traverse all attributes and add namespace URI if necessary
-            foreach(Node attributeNode in attributes)
+            foreach (Node attributeNode in attributes)
             {
                 if (!string.IsNullOrEmpty(attributeNode.Prefix))
                 {
@@ -775,35 +783,34 @@ namespace Html
                 elementNode.IsEmptyElement = true;
             }
 
-            // Manage the depth
-            int depth = ScanDepth;
+            // === Adjust parent context as needed ===
+
+            // Manage the parent node
+            Node parent = m_nodeStackTop;
 
             // Iteratively close any elements on the stack that should be closed before this element is opened
             if (elementNode.InHtmlNamespace)
             {
-                foreach (Node node in m_parents)
+                while (parent != null && parent.NodeType == XmlNodeType.Element && parent.InHtmlNamespace)
                 {
-                    if (node.NodeType != XmlNodeType.Element || !node.InHtmlNamespace) break;
-
-                    string canCloseKey = string.Concat(node.LocalName, "-", elementNode.LocalName);
+                    string canCloseKey = string.Concat(parent.LocalName, "-", elementNode.LocalName);
                     if (s_CanClose.Contains(canCloseKey))
                     {
-                        m_nextNodes.Enqueue(MakeEndElement(node));
+                        m_nextNodes.Enqueue(Node.NewEndElement(parent));
+                        parent = parent.Parent;
                     }
                     else
                     {
-                        depth = node.Depth + 1;
                         break;
                     }
                 }
             }
 
             // Add the <html> element if the stack is empty and this isn't the <html> node.
-            if (CountNodeStack() == 0 && !elementNode.IsHtmlElement("html"))
+            if (parent == null && !elementNode.IsHtmlElement("html"))
             {
-                Debug.Assert(depth == 0);
-                m_nextNodes.Enqueue(new Node(depth, XmlNodeType.Element, string.Empty, "html"));
-                ++depth;
+                parent = new Node(parent, XmlNodeType.Element, string.Empty, "html");
+                m_nextNodes.Enqueue(parent);
             }
 
             // Add the <body> element if there's not a head or body already in place
@@ -812,25 +819,27 @@ namespace Html
                 && !elementNode.IsHtmlElement("head")
                 && !elementNode.IsHtmlElement("html"))
             {
-                m_nextNodes.Enqueue(new Node(depth, XmlNodeType.Element, string.Empty, "body"));
-                ++depth;
+                parent = new Node(parent, XmlNodeType.Element, string.Empty, "body");
+                m_nextNodes.Enqueue(parent);
             }
 
             // Other implied parent elements
             if (elementNode.IsHtmlElement("col") && !ProbeNodeStack("colgroup"))
             {
-                m_nextNodes.Enqueue(new Node(depth, XmlNodeType.Element, string.Empty, "colgroup"));
-                ++depth;
+                parent = new Node(parent, XmlNodeType.Element, string.Empty, "colgroup");
+                m_nextNodes.Enqueue(parent);
             }
             else if (elementNode.IsHtmlElement("tr") && !ProbeNodeStack("tbody")
                 && !ProbeNodeStack("thead") && !ProbeNodeStack("tfoot"))
             {
-                m_nextNodes.Enqueue(new Node(depth, XmlNodeType.Element, string.Empty, "tbody"));
-                ++depth;
+                parent = new Node(parent, XmlNodeType.Element, string.Empty, "tbody");
+                m_nextNodes.Enqueue(parent);
             }
 
-            // Update this element's depth
-            elementNode.Depth = depth;
+            // Set this element's parent
+            elementNode.Parent = parent;
+
+            // === Handle the Result
 
             // If any nodes have been queued up, add this to the end of the list
             if (m_nextNodes.Count > 0)
@@ -874,9 +883,9 @@ namespace Html
             *        Possibly add a tolerant mode that allows all elements to be closed. Or perhaps errors
             *        are reported but parsing continues. Also do the same for the End-of-file auto
             *        closing function. */
-            foreach (Node node in m_parents)
+            for (Node node = m_nodeStackTop; node != null; node = node.Parent)
             {
-                m_nextNodes.Enqueue(MakeEndElement(node));
+                m_nextNodes.Enqueue(Node.NewEndElement(node));
                 if (string.Equals(node.Prefix, prefix, StringComparison.Ordinal) &&
                 string.Equals(node.LocalName, localName, StringComparison.Ordinal)) break;
             }
@@ -971,14 +980,6 @@ namespace Html
                 && c != '`';
         }
 
-        static Node MakeEndElement(Node element)
-        {
-            Debug.Assert(element.NodeType == XmlNodeType.Element);
-            Node endElement = new Node(element.Depth, XmlNodeType.EndElement, string.Empty);
-            endElement.SetName(element);
-            return endElement;
-        }
-
         void SkipWhitespace()
         {
             char ch;
@@ -1012,29 +1013,21 @@ namespace Html
             if (value.Length > 0 && value[value.Length - 1] == '?') value = value.Substring(0, value.Length - 1);
             value = value.Trim();
 
-            m_currentNode = new Node(ScanDepth, XmlNodeType.ProcessingInstruction, value);
+            m_currentNode = new Node(PeekNodeStack(), XmlNodeType.ProcessingInstruction, value);
             m_currentNode.SetName(prefix, localName);
         }
 
         void ScanEndOfFile()
         {
             // End of file. pop any unclosed elements from the stack
-            if (CountNodeStack() > 0)
+            if (m_nodeStackTop != null)
             {
-                m_currentNode = MakeEndElement(PeekNodeStack());
+                m_currentNode = Node.NewEndElement(m_nodeStackTop);
             }
             else
             {
                 m_readState = ReadState.EndOfFile;
-                SetCurrentNode(new Node(0, XmlNodeType.EndEntity, string.Empty));
-            }
-        }
-
-        int ScanDepth
-        {
-            get
-            {
-                return (CountNodeStack() > 0) ? PeekNodeStack().Depth + 1 : 0;
+                SetCurrentNode(new Node(null, XmlNodeType.EndEntity, string.Empty));
             }
         }
 
@@ -1149,31 +1142,29 @@ namespace Html
             if (node.NodeType == XmlNodeType.Element) m_currentAttributes = node.Attributes;
         }
 
-        int CountNodeStack()
-        {
-            return m_parents.Count;
-        }
-
         Node PeekNodeStack()
         {
-            return m_parents.Peek();
+            return m_nodeStackTop;
         }
 
         void PushNodeStack()
         {
-            m_parents.Push(m_currentNode);
+            Debug.Assert(object.ReferenceEquals(m_nodeStackTop, m_currentNode.Parent));
+            m_nodeStackTop = m_currentNode;
             m_currentNode = null;
         }
 
-        void PopNodeStack()
+        Node PopNodeStack()
         {
-            m_currentNode = m_parents.Pop();
-            if (m_currentNode.NodeType == XmlNodeType.Element) m_currentAttributes = m_currentNode.Attributes;
+            Debug.Assert(m_nodeStackTop != null);
+            Node node = m_nodeStackTop;
+            m_nodeStackTop = m_nodeStackTop.Parent;
+            return node;
         }
 
         bool ProbeNodeStack(string localName)
         {
-            foreach (Node node in m_parents)
+            for (Node node = m_nodeStackTop; node != null; node = node.Parent)
             {
                 if (node.IsHtmlElement(localName))
                 {
@@ -1185,7 +1176,7 @@ namespace Html
 
         bool ProbeNodeStack(string prefix, string localName)
         {
-            foreach (Node node in m_parents)
+            for (Node node = m_nodeStackTop; node != null; node = node.Parent)
             {
                 if (node.NodeType == XmlNodeType.Element
                     && string.Equals(node.Prefix, prefix, StringComparison.Ordinal)
@@ -1195,6 +1186,28 @@ namespace Html
                 }
             }
             return false;
+        }
+
+        bool WhitespaceIsSignificant
+        {
+            get
+            {
+                return (m_currentNode != null) ? m_currentNode.WhitespaceIsSignificant :
+                    (m_nodeStackTop != null) ? m_nodeStackTop.WhitespaceIsSignificant :
+                    false;
+            }
+
+            set
+            {
+                if (m_currentNode != null)
+                {
+                    m_currentNode.WhitespaceIsSignificant = value;
+                }
+                else if (m_nodeStackTop != null)
+                {
+                    m_nodeStackTop.WhitespaceIsSignificant = value;
+                }
+            }
         }
 
         #endregion
@@ -1379,7 +1392,7 @@ namespace Html
             }
 
             // Next, walk the stack
-            foreach(Node node in m_parents)
+            for (Node node = m_nodeStackTop; node != null; node = node.Parent)
             {
                 if (node.NamespaceMap != null)
                 {
@@ -1419,9 +1432,14 @@ namespace Html
 
         private class Node
         {
-            public Node(int depth, XmlNodeType type, string value)
+            private Node m_parent;
+            private bool m_whitespaceIsSignificant;
+            private int m_depth;
+
+            public Node(Node parent, XmlNodeType type, string value)
             {
-                Depth = depth;
+                Debug.Assert(type != XmlNodeType.EndElement, "Use NewEndElement");
+                Parent = parent;
                 NodeType = type;
                 Value = value;
                 NamespaceUri = string.Empty;
@@ -1430,16 +1448,27 @@ namespace Html
                 IsEmptyElement = false;
                 Attributes = null;
                 NamespaceMap = null;
+                m_depth = -1;   // Late determination of depth
             }
 
-            public Node(int depth, XmlNodeType type, string value, string localName)
-                : this(depth, type, value)
+            public Node(Node parent, XmlNodeType type, string value, string localName)
+                : this(parent, type, value)
             {
                 SetName(string.Empty, localName);
                 Attributes = new List<Node>();
             }
 
-            public int Depth;
+            public static Node NewEndElement(Node startElement)
+            {
+                Debug.Assert(startElement.NodeType == XmlNodeType.Element);
+                Node node = new Node(startElement.Parent, XmlNodeType.None, string.Empty);
+                node.NodeType = XmlNodeType.EndElement;
+                node.NamespaceUri = startElement.NamespaceUri;
+                node.Prefix = startElement.Prefix;
+                node.LocalName = startElement.LocalName;
+                return node;
+            }
+
             public XmlNodeType NodeType;
             public string Value;
             public string NamespaceUri { get; set; }
@@ -1462,6 +1491,60 @@ namespace Html
                 NamespaceUri = source.NamespaceUri;
                 Prefix = source.Prefix;
                 LocalName = source.LocalName;
+            }
+
+            public Node Parent
+            {
+                get
+                {
+                    return m_parent;
+                }
+
+                set
+                {
+                    m_parent = value;
+                    m_whitespaceIsSignificant = (value != null) ? value.WhitespaceIsSignificant : false;
+                }
+            }
+
+            public int Depth
+            {
+                get
+                {
+                    // Late determination of depth because the node tree gets
+                    // adjusted dynamically as the tree is paresed due to implicit
+                    // parent elements and automatically closing elements.
+                    if (m_depth < 0)
+                    {
+                        if (m_parent == null)
+                        {
+                            m_depth = 0;
+                        }
+                        else
+                        {
+                            m_depth = m_parent.Depth + 1;   // This goes recursive
+                        }
+                    }
+                    return m_depth;
+                }
+            }
+
+            public bool WhitespaceIsSignificant
+            {
+                get
+                {
+                    return m_whitespaceIsSignificant;
+                }
+
+                set
+                {
+                    // Propogate the value to this node up to the nearest parent element.
+                    for (Node node = this; node != null; node = node.Parent)
+                    {
+                        m_whitespaceIsSignificant = value;
+                        if (node.NodeType == XmlNodeType.Element) break;
+                    }
+                }
             }
 
             public bool InHtmlNamespace

@@ -2,11 +2,20 @@
 <html>
   <body>
     <div>
-      <span>We open a span but don't close it.<span>In fact, we open a span within a span.<br />But it's the surrounding div that closes it all.<br />That's bad HTML. Spans can be nested but should have end-tags.</span></span>
+      <span>We open a span but don't close it.
+  <span>In fact, we open a span within a span.
+  <br />But it's the surrounding div that closes it all.
+  <br />That's bad HTML. Spans can be nested but should have end-tags.
+</span></span>
     </div>
-    <zz:top xmlns:zz="uri:namespace:zz">A namespace will be created for an<zz:hello yyz:rush="music" xmlns:yyz="uri:namespace:yyz">arbitrary</zz:hello>prefix. This is extra tolerance beyond XML or HTML requirements.</zz:top>
-    <p>This paragraph has a<br />break with anend-tag but break is a void element.
-  It also includes an end hr tag and an end span tag without matching begin tags.</p>
-    <xy:morestuff xmlns:xy="uri:namespace:xy">This is bad syntax in HTML or XML but this is a tolerant reader.</xy:morestuff>
+    <zz:top xmlns:zz="uri:namespace:zz">
+  A namespace will be created for an <zz:hello yyz:rush="music" xmlns:yyz="uri:namespace:yyz">arbitrary</zz:hello> prefix. This is extra tolerance beyond XML or HTML requirements.
+</zz:top>
+    <p>
+  This paragraph has a <br />break with anend-tag but break is a void element.
+  It also includes an  end hr tag and an  end span tag without matching begin tags.
+</p>
+    <xy:morestuff xmlns:xy="uri:namespace:xy">This is bad syntax in HTML or XML but this is a tolerant reader.
+</xy:morestuff>
   </body>
 </html>

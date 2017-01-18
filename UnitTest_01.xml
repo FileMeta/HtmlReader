@@ -18,10 +18,13 @@ omitted end tags (</p>) and more. -->
         </tr>
       </tbody>
     </table>
-    <p>Paragraphs are auto-terminated by other paragraphs.</p>
-    <p>And paragraphs can be auto-terminated by headings.</p>
+    <p>Paragraphs are auto-terminated by other paragraphs.
+</p>
+    <p>And paragraphs can be auto-terminated by headings.
+</p>
     <h1>Here's a heading.</h1>
-    <p>Some text<font color="red" face="verdana" size="15px">with<br />font</font>stuff (HTML5 would use css).</p>
+    <p>Some text <font color="red" face="verdana" size="15px">with<br />font</font> stuff (HTML5 would use css).
+</p>
     <p>Line<br />breaks<br />are<br />void<br />tags<br />but don't require that marking.</p>
   </body>
 </html>

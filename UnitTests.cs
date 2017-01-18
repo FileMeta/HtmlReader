@@ -83,7 +83,7 @@ namespace HtmlReaderTest
         public static void HtmlToXml(TextReader htmlIn, TextWriter xmlOut)
         {
             HtmlReaderSettings readerSettings = new HtmlReaderSettings();
-            readerSettings.IgnoreWhitespace = true;
+            readerSettings.IgnoreInsignificantWhitespace = true;
             using (HtmlReader reader = new HtmlReader(htmlIn, readerSettings))
             {
                 XmlWriterSettings writerSettings = new XmlWriterSettings();
@@ -97,11 +97,16 @@ namespace HtmlReaderTest
             }
         }
 
-        public static void HtmlToXml(int testIndex)
+        public static void HtmlToXml(int testIndex, bool altXmlFilename = false)
         {
             string htmlFilename;
             string xmlFilename;
             GenerateFilenames(testIndex, out htmlFilename, out xmlFilename);
+            if (altXmlFilename)
+            {
+                xmlFilename = Path.Combine(Path.GetDirectoryName(xmlFilename), string.Concat(Path.GetFileNameWithoutExtension(xmlFilename), "_alt.xml"));
+
+            }
 
             using (StreamReader reader = new StreamReader(htmlFilename, Encoding.UTF8, true))
             {
