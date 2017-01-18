@@ -637,6 +637,17 @@ namespace Html
             }
             int nTrailingWhitespace = builder.Length;
 
+            // If there is no enclosing element, generate the implied <html> and <body> elements.
+            if (PeekNodeStack() == null)
+            {
+                Node parent = new Node(null, XmlNodeType.Element, string.Empty, "html");
+                m_nextNodes.Enqueue(parent);
+                parent = new Node(parent, XmlNodeType.Element, string.Empty, "body");
+                m_nextNodes.Enqueue(parent);
+                Debug.Assert(m_currentNode == null);
+                return;
+            }
+
             // Must collect at least one character (if it's a '<' then it's because we're being tolerant about syntax errors)
             if (builder.Length == 0)
             {

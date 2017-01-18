@@ -29,11 +29,13 @@ namespace HtmlReaderTest
                 UnitTests.MatchHtmlToXml(1);
                 UnitTests.MatchHtmlToXml(2);
                 UnitTests.MatchHtmlToXml(3);
+                UnitTests.MatchHtmlToXml(4);
 
                 UnitTests.UnexpectedEof(0);
                 UnitTests.UnexpectedEof(1);
                 UnitTests.UnexpectedEof(2);
                 UnitTests.UnexpectedEof(3);
+                UnitTests.UnexpectedEof(4);
             }
             catch (Exception err)
             {

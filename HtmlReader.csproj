@@ -60,6 +60,8 @@
     <Content Include="UnitTest_02.xml" />
     <Content Include="UnitTest_03.html" />
     <Content Include="UnitTest_03.xml" />
+    <Content Include="UnitTest_04.html" />
+    <Content Include="UnitTest_04.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
