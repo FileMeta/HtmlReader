@@ -18,13 +18,17 @@ omitted end tags (</p>) and more. -->
         </tr>
       </tbody>
     </table>
-    <p>Paragraphs are auto-terminated by other paragraphs.
-</p>
-    <p>And paragraphs can be auto-terminated by headings.
-</p>
-    <h1>Here's a heading.</h1>
-    <p>Some text <font color="red" face="verdana" size="15px">with<br />font</font> stuff (HTML5 would use css).
-</p>
-    <p>Line<br />breaks<br />are<br />void<br />tags<br />but don't require that marking.</p>
-  </body>
+quotes are not required on attribute values
+<hr align="right" width="20" />
+<hr align="center" width="15" />
+Slash indicating that HR is a void tag is optional
+<hr align="left" width="10" />
+But if the attribute value is not quoted and there is no space before the slash
+it will be included in the attribute.
+<hr width="10" height="5/" />
+<p>Paragraphs are auto-terminated by other paragraphs.
+</p><p>And paragraphs can be auto-terminated by headings.
+</p><h1>Here's a heading.</h1>
+<p>Some text <font color="red" face="verdana" size="15px">with<br />font</font> stuff (HTML5 would use css).
+</p><p>Line<br />breaks<br />are<br />void<br />tags<br />but don't require that marking.</p></body>
 </html>
