@@ -117,6 +117,37 @@ namespace HtmlReaderTest
             }
         }
 
+        // For whitespace characters to provoke the (now fixed) bug, they must occur
+        // between tags.
+        const string c_WhiteSpaceHtml = "<html><body>"
+        + "<div>"
+        + "   Non space whitespace: <b>1</b> u000C <b>2</b> \u00A0 <b>3</b> \u1680 <b>4</b> \u2000 <b>5</b> \u2008 <b>6</b>"
+        + "</div>"
+        + "<div>"
+        + "   Both space and whitespace:  <b>1</b> \u0009 <b>2</b> \u000A <b>3</b> \u000D <b>4</b> \u0020 <b>5</b>"
+        + "</div>"
+        + "</body></html>";
+
+        // Tests handling of Unicode whitespace that is not HTML5 "White Character"
+        // This verifies a bug fix. Text is coded here because the Visual Studio
+        // editor doesn't facilitate entry of unicode characters into an HTML document.
+        public static void WhiteSpace()
+        {
+            XmlDocument doc;
+
+            var settings = new HtmlReaderSettings();
+            settings.CloseInput = true;
+            using (HtmlReader reader = new HtmlReader(new StringReader(c_WhiteSpaceHtml), settings))
+            {
+                doc = new XmlDocument();
+                doc.Load(reader);
+            }
+            // If there are invalid whitespace characters, OuterXml will throw an exception.
+            string result = doc.CreateNavigator().OuterXml;
+            Console.WriteLine(result);
+            Console.WriteLine("WhiteSpace Succeeded");
+        }
+
         static void GenerateFilenames(int index, out string htmlFilename, out string xmlFilename)
         {
             string sindex = index.ToString("d2");

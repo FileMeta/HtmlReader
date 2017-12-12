@@ -1,4 +1,21 @@
 ﻿/*
+---
+# Metadata in MicroYaml format. See http://filemeta.org and http://schema.org
+# This a CodeBit. See http://filemeta.org/CodeBit.html
+name: HtmlReader.cs
+description: HTML Parser CodeBit that implements the XmlReader interface
+url: https://raw.githubusercontent.com/FileMeta/HtmlReader/master/HtmlReader.cs
+codeRepository: https://github.com/FileMeta/HtmlReader
+version: 1.2
+keywords: CodeBit
+dateModified: 2017-12-11
+copyrightHolder: Brandt Redd
+copyrightYear: 2016
+license: https://opensource.org/licenses/MIT
+...
+*/
+
+/*
 MIT License
 
 Copyright (c) 2016 Brandt Redd
@@ -37,11 +54,6 @@ using System.Diagnostics;
 * prefixes except for a limited set of deprecated attributes on
 * SVG elements (see http://www.w3.org/TR/html5/syntax.html section 8.1.2.3).
 * Nevertheless we could transmit them through to XML when encountered.
-*/
-
-/*
-UNIT TESTS
-* Case folding on element and attribute names
 */
 
 namespace Html
@@ -616,7 +628,7 @@ namespace Html
             for (;;)
             {
                 char ch = CharRead();
-                if (!char.IsWhiteSpace(ch))
+                if (!IsSpaceChar(ch))
                 {
                     CharUnread(ch);
                     break;
@@ -667,7 +679,7 @@ namespace Html
                     break;
                 }
                 builder.Append(ch);
-                if (char.IsWhiteSpace(ch))
+                if (IsSpaceChar(ch))
                 {
                     ++nTrailingWhitespace;
                 }
@@ -997,7 +1009,7 @@ namespace Html
             do
             {
                 ch = CharRead();
-            } while (char.IsWhiteSpace(ch));
+            } while (IsSpaceChar(ch));
             CharUnread(ch);
         }
 
@@ -1373,6 +1385,15 @@ namespace Html
         {
             // TODO: Per HTML5 this should also include Unicode CombiningChars and Extenders
             return char.IsLetterOrDigit(ch) || ch == '.' || ch == '-' || ch == '_' || ch == ':';
+        }
+
+        // These are space characters as defined by HTML 5
+        // HTML 5 also includes U+000C which is the form-feed character.
+        // However XmlWriter does not allow that value in Whitespace elements so
+        // we treat it as regular text, not whitespace.
+        static bool IsSpaceChar(char ch)
+        {
+            return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
         }
 
         #endregion

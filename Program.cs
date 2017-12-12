@@ -36,6 +36,8 @@ namespace HtmlReaderTest
                 UnitTests.UnexpectedEof(2);
                 UnitTests.UnexpectedEof(3);
                 UnitTests.UnexpectedEof(4);
+
+                UnitTests.WhiteSpace();
             }
             catch (Exception err)
             {
