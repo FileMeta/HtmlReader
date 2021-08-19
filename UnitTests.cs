@@ -44,6 +44,19 @@ namespace HtmlReaderTest
 
             Console.WriteLine("MatchHtmlToXml({0}) {1}.", testIndex, succeeded ? "succeeded" : "failed");
 
+#if DEBUG
+            if (!succeeded)
+            {
+                string expectedFilename = $"{c_UnitTestPrefix}{testIndex:d2}_expected{c_UnitTestSuffixXml}";
+
+                Console.WriteLine($"  Writing expected output to {expectedFilename}");
+                using (var writer = new StreamWriter(expectedFilename, false, new UTF8Encoding(false)))
+                {
+                    writer.Write(convertedHtml);
+                }
+            }
+#endif
+
             Debug.Assert(succeeded);
             return succeeded;
         }

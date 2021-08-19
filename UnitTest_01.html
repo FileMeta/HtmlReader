@@ -21,3 +21,12 @@ it will be included in the attribute.
 <h1>Here's a heading.</h1>
 <p>Some text <font color=red face='verdana' size="15px">with<br>font</font> stuff (HTML5 would use css).
 <p>Line<br>breaks<BR>are<Br>void<bR>tags<br>but don't require that marking.
+<script>
+    // Within script tags, < is a less-than sign unless followed by "script"
+    // Within script tags, & doesn't require escaping
+    let x = 4;
+    let y = 6;
+    if (x < y && 1 != 0) console.log("Math is true!");
+</script>
+<p>End of document.
+

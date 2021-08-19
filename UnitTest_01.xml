@@ -30,5 +30,15 @@ it will be included in the attribute.
 </p><p>And paragraphs can be auto-terminated by headings.
 </p><h1>Here's a heading.</h1>
 <p>Some text <font color="red" face="verdana" size="15px">with<br />font</font> stuff (HTML5 would use css).
-</p><p>Line<br />breaks<br />are<br />void<br />tags<br />but don't require that marking.</p></body>
+</p><p>Line<br />breaks<br />are<br />void<br />tags<br />but don't require that marking.
+<script>
+    // Within script tags, &lt; is a less-than sign unless followed by "script"
+    // Within script tags, &amp; doesn't require escaping
+    let x = 4;
+    let y = 6;
+    if (x &lt; y &amp;&amp; 1 != 0) console.log("Math is true!");
+</script>
+</p><p>End of document.
+
+</p></body>
 </html>

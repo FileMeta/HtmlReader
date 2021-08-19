@@ -6,11 +6,11 @@ name: HtmlReader.cs
 description: HTML Parser CodeBit that implements the XmlReader interface
 url: https://raw.githubusercontent.com/FileMeta/HtmlReader/master/HtmlReader.cs
 codeRepository: https://github.com/FileMeta/HtmlReader
-version: 1.2
+version: 1.3
 keywords: CodeBit
-dateModified: 2017-12-11
+dateModified: 2021-08-20
 copyrightHolder: Brandt Redd
-copyrightYear: 2016
+copyrightYear: 2016-2021
 license: https://opensource.org/licenses/MIT
 ...
 */
@@ -463,6 +463,10 @@ namespace Html
                     {
                         Debug.Assert(CharEof);
                         ScanEndOfFile();
+                    }
+                    else if (m_nodeStackTop != null &&  m_nodeStackTop.IsHtmlElement("script")) // If the top of the node stack is <script> do special script text
+                    {
+                        ScanScript();
                     }
                     else if (ch == '<') // Markup
                     {
@@ -920,6 +924,50 @@ namespace Html
             }
         }
 
+        void ScanScript()
+        {
+            /* Script text follows special rules which are digested here:
+             * https://stackoverflow.com/questions/14574471/how-do-browsers-parse-a-script-tag-exactly
+             * Those rules establish special circumstances in which you can embed
+             * "</script>" without actually ending the script.
+             * This implementation follows the consensus for HTML writers which is that
+             * you must never embed </script> within your script but, instead, escape
+             * it in some way.
+             * All whitespace within the <script> tags is significant including
+             * that at the beginning and end.
+             */
+            var builder = new StringBuilder();
+
+            for (; ; )
+            {
+                char ch = CharRead();
+                if (ch == '\0') break; // EOF
+                if (ch == '<')
+                {
+                    if (ReadMatchName("/script"))
+                    {
+                        SkipWhitespace();
+                        if (!ReadMatch('>'))
+                        {
+                            // TODO: Report error, bad end tag format
+                        }
+                        break;
+                    }
+                }
+
+                builder.Append(ch);
+            }
+
+            var scriptNode = PeekNodeStack();
+            Debug.Assert(scriptNode.NodeType == XmlNodeType.Element && scriptNode.LocalName == "script");
+
+            // Emit the text (without HtmlDecode)
+            SetCurrentNode(new Node(scriptNode, XmlNodeType.Text, builder.ToString()));
+
+            // Queue up the end script tag
+            m_nextNodes.Enqueue(Node.NewEndElement(scriptNode));
+        }
+
         bool ScanName(out string prefix, out string localName)
         {
             SkipWhitespace();
@@ -1155,6 +1203,57 @@ namespace Html
             return false;
         }
 
+        /// <summary>
+        /// Reads a matching string that is followed by an acceptable name termination character
+        /// </summary>
+        /// <param name="match">The string that should be matched</param>
+        /// <param name="ignoreCase">True if ASCII case should be ignored in the match.</returns>
+        /// <remarks>
+        /// The termination character is not included in the text that is read
+        /// Upon failure to read the cursor is unchanged (through CharUnread)
+        /// </remarks>
+        bool ReadMatchName(string match, bool ignoreCase = false)
+        {
+            if (match.Length <= 0) throw new InvalidOperationException();
+            int i = 0;
+            char ch; // Space
+            char chMatch;
+            for (; ; )
+            {
+                ch = CharRead();
+                chMatch = match[i];
+
+                // HTML Rules only fold case on ASCII characters
+                if (ignoreCase)
+                {
+                    if (ch >= 'A' && ch <= 'Z') ch += (char)32;
+                    if (chMatch >= 'A' && chMatch <= 'Z') ch += (char)32;
+                }
+
+                if (ch != chMatch) break;
+                ++i;
+
+                if (i >= match.Length)
+                {
+                    char term = CharPeek();
+                    if (term == '>' || char.IsWhiteSpace(term)) return true;
+                    --i;
+                    break;
+                }
+            }
+
+            // Unread the character that failed to match.
+            CharUnread(ch);
+
+            // Unread the rest of the match list (if any)
+            while (i > 0)
+            {
+                --i;
+                CharUnread(match[i]);
+            }
+            return false;
+        }
+
         #endregion
 
         #region NodeStack
@@ -1317,6 +1416,16 @@ namespace Html
                 return;
             }
             m_readBuf.Push(ch);
+        }
+
+        void StringUnread(string value)
+        {
+            int i = value.Length;
+            while (i > 0)
+            {
+                --i;
+                CharUnread(value[i]);
+            }
         }
 
         #endregion
