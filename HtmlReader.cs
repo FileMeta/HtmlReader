@@ -6,9 +6,9 @@ name: HtmlReader.cs
 description: HTML Parser CodeBit that implements the XmlReader interface
 url: https://raw.githubusercontent.com/FileMeta/HtmlReader/master/HtmlReader.cs
 codeRepository: https://github.com/FileMeta/HtmlReader
-version: 1.3
+version: 1.4
 keywords: CodeBit
-dateModified: 2021-08-20
+dateModified: 2021-09-17
 copyrightHolder: Brandt Redd
 copyrightYear: 2016-2021
 license: https://opensource.org/licenses/MIT
