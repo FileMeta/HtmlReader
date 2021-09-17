@@ -1015,7 +1015,7 @@ namespace Html
                 for (;;)
                 {
                     char ch = CharRead();
-                    if (ch == quote || !IsOkAttrCharQuoted(ch)) break;
+                    if (ch == quote || ch == '\0') break;
                     builder.Append(ch);
                 }
             }
@@ -1033,11 +1033,6 @@ namespace Html
                 }
             }
             return System.Net.WebUtility.HtmlDecode(builder.ToString());
-        }
-
-        static bool IsOkAttrCharQuoted(char c)
-        {
-            return c != '<' && c != '>' && c != '\0';
         }
 
         static bool IsOkAttrCharUnquoted(char c)

@@ -157,7 +157,9 @@ namespace HtmlReaderTest
             }
             // If there are invalid whitespace characters, OuterXml will throw an exception.
             string result = doc.CreateNavigator().OuterXml;
-            Console.WriteLine(result);
+
+            // This should never fail. It's essentially here to make sure the optimizer keeps teh OuterXml call.
+            if (string.IsNullOrEmpty(result)) throw new ApplicationException("Whitespace Failed");
             Console.WriteLine("WhiteSpace Succeeded");
         }
 

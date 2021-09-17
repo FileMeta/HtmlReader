@@ -1,4 +1,4 @@
-﻿<!-- This unit test covers things the reader tolerates but are invalid XML and HTML5. -->
+<!-- This unit test covers things the reader tolerates but are invalid XML and HTML5. -->
 <html>
   <body>
     <div>
